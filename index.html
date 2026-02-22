@@ -1,1 +1,268 @@
-pbpaste > index.html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fábrica de Realizações</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+        
+        :root {
+            --blue-dark: #0A192F;
+            --gold: #D4AF37;
+            --bg: #F0F4F8;
+            --text: #333;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        h1, h2, h3 { color: var(--blue-dark); margin-top: 0; }
+        .gold-text { color: var(--gold); }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        button {
+            background-color: var(--blue-dark);
+            color: var(--gold);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background-color: #0d213f;
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            color: var(--blue-dark);
+            border: 2px solid var(--blue-dark);
+        }
+        
+        .btn-outline:hover {
+            background-color: rgba(10, 25, 47, 0.05);
+        }
+
+        .hidden { display: none !important; }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .timer-display {
+            font-size: 64px;
+            font-weight: 600;
+            color: var(--blue-dark);
+            margin: 20px 0;
+            text-shadow: 0px 4px 10px rgba(212, 175, 55, 0.3);
+        }
+        
+        .affirmation-box {
+            background: #f8faff;
+            padding: 20px;
+            border-left: 4px solid var(--gold);
+            margin: 15px 0;
+            text-align: left;
+            font-style: italic;
+            border-radius: 0 8px 8px 0;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container fade-in" id="screen-input">
+        <h1>Fábrica de <span class="gold-text">Realizações</span></h1>
+        <p>Qual é a sua intenção de hoje? Escreva no tempo presente, como se já fosse real.</p>
+        <input type="text" id="desireInput" placeholder="Ex: Eu estou tão feliz e grato agora que...">
+        <button onclick="startJourney()"><i data-lucide="sparkles"></i> Iniciar Sessão</button>
+    </div>
+
+    <div class="container hidden" id="screen-timer">
+        <h2>Foque na <span class="gold-text">Sensação</span></h2>
+        <p>Mantenha a imagem do seu desejo realizado na mente.</p>
+        
+        <div class="affirmation-box fade-in" id="currentAffirmation"></div>
+        
+        <div class="timer-display" id="timer">68</div>
+        <p style="font-size: 0.9em; color: #666;">Respire fundo...</p>
+    </div>
+
+    <div class="container hidden" id="screen-summary">
+        <div id="pdf-content" style="padding: 20px;">
+            <h1>Sessão <span class="gold-text">Concluída</span></h1>
+            <p>Você plantou a semente. O universo está trabalhando.</p>
+            
+            <h3 style="margin-top: 30px; text-align: left;">Sua Intenção:</h3>
+            <p id="summaryDesire" style="font-weight: 600; color: var(--blue-dark); text-align: left; font-size: 1.1rem;"></p>
+            
+            <h3 style="margin-top: 20px; text-align: left;">Afirmações Geradas:</h3>
+            <div id="summaryAffirmations"></div>
+        </div>
+        
+        <div style="display: flex; justify-content: center; gap: 15px; margin-top: 20px; flex-wrap: wrap;">
+            <button onclick="exportPDF()"><i data-lucide="download"></i> Salvar PDF</button>
+            <button class="btn-outline" onclick="location.reload()"><i data-lucide="rotate-ccw"></i> Nova Sessão</button>
+        </div>
+    </div>
+
+    <script>
+        // Inicializa os ícones do Lucide
+        lucide.createIcons();
+        
+        let affirmations = [];
+        let desire = "";
+
+        function startJourney() {
+            desire = document.getElementById('desireInput').value.trim();
+            if(!desire) { 
+                alert("Por favor, insira o seu desejo realizado para começar."); 
+                return; 
+            }
+            
+            // Gera afirmações baseadas no texto do usuário
+            affirmations = [
+                `Eu estou perfeitamente alinhado com a realidade onde: ${desire}`,
+                `É maravilhoso e libertador sentir que: ${desire}`,
+                `O universo me apoia e me confirma a todo instante que: ${desire}`
+            ];
+            
+            document.getElementById('currentAffirmation').innerText = affirmations[0];
+            switchScreen('screen-input', 'screen-timer');
+            startTimer();
+        }
+
+        function switchScreen(hideId, showId) {
+            document.getElementById(hideId).classList.add('hidden');
+            const showEl = document.getElementById(showId);
+            showEl.classList.remove('hidden');
+            
+            // Força a re-animação de fade-in
+            showEl.classList.remove('fade-in');
+            void showEl.offsetWidth; 
+            showEl.classList.add('fade-in');
+        }
+
+        function startTimer() {
+            let timeLeft = 68;
+            const timerEl = document.getElementById('timer');
+            
+            const interval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                
+                // Troca a afirmação visualmente durante a contagem
+                if(timeLeft === 45) {
+                    changeAffirmationText(affirmations[1]);
+                }
+                if(timeLeft === 22) {
+                    changeAffirmationText(affirmations[2]);
+                }
+
+                if(timeLeft <= 0) {
+                    clearInterval(interval);
+                    playChime();
+                    showSummary();
+                }
+            }, 1000);
+        }
+
+        function changeAffirmationText(text) {
+            const affEl = document.getElementById('currentAffirmation');
+            affEl.classList.remove('fade-in');
+            void affEl.offsetWidth;
+            affEl.innerText = text;
+            affEl.classList.add('fade-in');
+        }
+
+        function playChime() {
+            // Usa a API de Áudio nativa do navegador para criar um som suave de 528Hz (Frequência do Amor/Reparação)
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(528, ctx.currentTime);
+            
+            gainNode.gain.setValueAtTime(0, ctx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.1);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 4);
+            
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            osc.start();
+            osc.stop(ctx.currentTime + 4);
+        }
+
+        function showSummary() {
+            document.getElementById('summaryDesire').innerText = desire;
+            const affList = document.getElementById('summaryAffirmations');
+            affList.innerHTML = '';
+            
+            affirmations.forEach(aff => {
+                affList.innerHTML += `<div class="affirmation-box" style="padding: 10px; font-size: 1rem;">${aff}</div>`;
+            });
+            
+            switchScreen('screen-timer', 'screen-summary');
+        }
+
+        function exportPDF() {
+            const element = document.getElementById('pdf-content');
+            const opt = {
+                margin:       0.5,
+                filename:     'Sessao_Fabrica_de_Realizacoes.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            
+            html2pdf().set(opt).from(element).save();
+        }
+    </script>
+</body>
+</html>
